@@ -139,7 +139,7 @@ custom:
 
     - If: '"${self:custom.variables.boundaryPolicy}" == ""'
       Exclude:
-        - resources.IamRoleCustomResourcesLambdaExecution.PermissionsBoundary
+        - resources.IamRoleCustomResourcesLambdaExecution.Properties.PermissionsBoundary
 
     - If: '"${self:custom.variables.logDestinationArn}" == ""'
       Set:
@@ -244,7 +244,7 @@ custom:
   splitStacks:
     perFunction: true
 
-  # https://www.serverless.com/plugins/serverless-plugin-log-subscription
+  # see: https://www.serverless.com/plugins/serverless-plugin-log-subscription
   logSubscription:
     enabled: true
     destinationArn: ${self:custom.variables.logDestinationArn}
