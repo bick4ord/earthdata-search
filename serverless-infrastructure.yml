@@ -19,7 +19,19 @@ provider:
 
   role: ${env:SERVERLESS_ROLE, 'EDSCServerlessAppRole'}
 
+plugins:
+  - serverless-plugin-ifelse
+
 #
 # AWS Infrastructure Resources
 #
 resources: ${file(./serverless-configs/${self:provider.name}-infrastructure-resources.yml)}
+
+custom:
+  variables:
+    boundaryPolicy: ${env:BOUNDARY_POLICY, ''}
+
+  serverlessIfElse:
+    - If: '"${self:custom.variables.boundaryPolicy}" == ""'
+      Exclude:
+        - resources.ServerlessAppRole.PermissionsBoundary

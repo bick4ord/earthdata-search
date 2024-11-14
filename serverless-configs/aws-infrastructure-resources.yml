@@ -84,7 +84,7 @@ Resources:
             {
               "Ref": "AWS::AccountId"
             },
-            ":policy/${env:BOUNDARY_POLICY}"
+            ":policy/${self:custom.variables.boundaryPolicy}"
           ]
         ]
       AssumeRolePolicyDocument:

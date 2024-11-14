@@ -135,7 +135,6 @@ custom:
   serverlessIfElse:
     - If: '"${self:custom.variables.boundaryPolicy}" == ""'
       Exclude:
-        - resources.ServerlessAppRole.PermissionsBoundary
         - resources.IamRoleCustomResourcesLambdaExecution.PermissionsBoundary
 
     - If: '"${self:custom.variables.logDestinationArn}" == ""'
