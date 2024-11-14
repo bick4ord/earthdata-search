@@ -14,7 +14,7 @@ provider:
       - ${env:SUBNET_ID_B}
 
   deploymentBucket:
-    name: ${env:SERVERLESS_BUCKET}
+    name: ${self:custom.variables.serverlessBucket}
     skipPolicySetup: true
 
   role: ${env:SERVERLESS_ROLE, 'EDSCServerlessAppRole'}
@@ -30,8 +30,13 @@ resources: ${file(./serverless-configs/${self:provider.name}-infrastructure-reso
 custom:
   variables:
     boundaryPolicy: ${env:BOUNDARY_POLICY, ''}
+    serverlessBucket: ${env:SERVERLESS_BUCKET, ''}
 
   serverlessIfElse:
+    - If: '"${self:custom.variables.serverlessBucket}" == ""'
+      Exclude:
+        - provider.deploymentBucket.name
+
     - If: '"${self:custom.variables.boundaryPolicy}" == ""'
       Exclude:
         - resources.ServerlessAppRole.PermissionsBoundary

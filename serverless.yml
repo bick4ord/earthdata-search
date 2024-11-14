@@ -69,7 +69,7 @@ provider:
   # Prevent Serverless from attempting to modify the deployment bucket policy as NGAP does not allow it
   deploymentBucket:
     skipPolicySetup: true
-    name: ${env:SERVERLESS_BUCKET}
+    name: ${self:custom.variables.serverlessBucket}
 
   # Deprecation warning: Starting with next major version, API Gateway naming will be changed from "{stage}-{service}" to "{service}-{stage}".
   # Set "provider.apiGateway.shouldStartNameWithService" to "true" to adapt to the new behavior now.
@@ -133,6 +133,10 @@ custom:
   infrastructureStackName: earthdata-search-infrastructure-${self:provider.stage}
 
   serverlessIfElse:
+    - If: '"${self:custom.variables.serverlessBucket}" == ""'
+      Exclude:
+        - provider.deploymentBucket.name
+
     - If: '"${self:custom.variables.boundaryPolicy}" == ""'
       Exclude:
         - resources.IamRoleCustomResourcesLambdaExecution.PermissionsBoundary
@@ -172,6 +176,7 @@ custom:
     useCache: ${env:USE_CACHE, 'false'}
     boundaryPolicy: ${env:BOUNDARY_POLICY, ''}
     logDestinationArn: ${env:LOG_DESTINATION_ARN, ''}
+    serverlessBucket: ${env:SERVERLESS_BUCKET, ''}
 
     cloudfrontToCloudwatchBucketPrefixApi:
       Fn::Join:
