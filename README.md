@@ -55,12 +55,6 @@ To ensure that you're using the correct version of Node it is recommended that y
 
     nvm use
 
-##### Serverless Framework
-
-Earthdata Search utilizes the [Serverless Framework](https://serverless.com/) for managing AWS resources. In order to fully run and manage the application you'll need to install it:
-
-    npm install -g serverless@latest
-
 ##### PostgreSQL
 
 Earthdata Search uses PostgreSQL in production on AWS RDS. If you don't already have it installed, [download](https://www.postgresql.org/download/) and install it to your development environment.
@@ -88,6 +82,16 @@ If you decide to install via Homebrew you'll need to create the default user.
 Once npm is installed locally, you need to download the dependencies by executing the command below in the project root directory:
 
     npm install
+
+##### Running Serverless Commands for Developers
+
+After an `npm install` or `npm ci` command creates the `node_modules` directory, serverless can be invoked with:
+
+    ./node_modules/.bin/serverless
+
+It is not recommended to install serverless at the global level, since the version downloaded may not be compatible with the versions that was tested against the latest release.  Using the binary from `node_modules` ensures that the version is compatible with what is tracked in `package-log.json` delivered in this repository.
+
+To run serverless commands for deployments, there is a dedicated deployment section below.
 
 ##### Configuration
 
@@ -196,6 +200,10 @@ test coverage will be updated in the coverage directory to see breakdown use
     open coverage/lcov-report/index.html
 
 ### Deployment
+First, build the docker container that will host the deployment bundle:
+    docker build --platform linux/amd64 -t earthdata-search:deploy .
+
+Do not publish this docker image since it may contain files with secrets.
 
 When the time comes to deploy the application, first ensure that you have the required ENV vars set:
 
@@ -213,6 +221,44 @@ For production use, this application uses Scatter Swap to obfuscate some IDs -- 
 - OBFUSCATION_SPIN
 - OBFUSCATION_SPIN_SHAPEFILES
 
-To deploy the full application use the following:
+It is recommended to create your own S3 bucket to host the serverless deployments.  This keeps the S3 resource outside of the cloudformation stacks, which can be troublesome for CI environments that would tear everything down.  This is because S3 buckets cannot be deleted unless they are empty, which would be additional steps outside of the serverless deploy/remove lifecycle.  To do this, export the environment variable:
 
-    NODE_ENV=production serverless deploy --stage UNIQUE_STAGE
+- SERVERLESS_BUCKET
+
+If this env var is not set, serverless will create it for both serverless deployment configurations.
+
+There is prerequisite infrastructure that is separate from the main application resources.  This will create an RDS an elasticache cluster
+
+To deploy the prerequisite infrastructure stack to dev, run:
+
+    docker run \
+    --init \
+    --platform linux/amd64 \
+    -e SERVERLESS_BUCKET \
+    -e AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN \
+    -e AWS_REGION=us-east-1 \
+    -e VPC_ID=vpc-id \
+    -e SUBNET_ID_A=subnet-id \
+    -e SUBNET_ID_B=subnet-id \
+    -e DB_INSTANCE_CLASS=db.t3.micro \
+    -e CACHE_INSTANCE_CLASS=cache.t2.micro \
+    -e DB_ALLOCATED_STORAGE=10 \
+    earthdata-search:deploy dev deploy serverless-infrastructure
+
+To deploy the application stack to dev, run:
+
+    docker run \
+    --init \
+    --platform linux/amd64 \
+    -e SERVERLESS_BUCKET \
+    -e AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN \
+    -e AWS_REGION=us-east-1 \
+    -e VPC_ID=vpc-id \
+    -e SUBNET_ID_A=subnet-id \
+    -e SUBNET_ID_B=subnet-id \
+    -e CLOUDFRONT_BUCKET_NAME=your-bucket-name \
+    earthdata-search:deploy dev deploy serverless
