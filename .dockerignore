@@ -1,9 +1,5 @@
 node_modules
-.DS_Store
-.git
-.github
-.serverless
-.webpack
+.*
 coverage
 dist
 node_modules
