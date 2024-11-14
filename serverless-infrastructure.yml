@@ -1,4 +1,5 @@
 service: earthdata-search-infrastructure
+frameworkVersion: '3'
 
 provider:
   name: aws
@@ -13,9 +14,10 @@ provider:
       - ${env:SUBNET_ID_B}
 
   deploymentBucket:
+    name: ${env:SERVERLESS_BUCKET}
     skipPolicySetup: true
 
-  role: EDSCServerlessAppRole
+  role: ${env:SERVERLESS_ROLE, 'EDSCServerlessAppRole'}
 
 #
 # AWS Infrastructure Resources

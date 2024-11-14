@@ -84,7 +84,7 @@ Resources:
             {
               "Ref": "AWS::AccountId"
             },
-            ":policy/NGAPShRoleBoundary"
+            ":policy/${env:BOUNDARY_POLICY}"
           ]
         ]
       AssumeRolePolicyDocument:
@@ -179,7 +179,7 @@ Resources:
       EngineVersion: '7.0'
       Port: 1521
       ClusterName: browse-scaler-${self:provider.stage}
-      CacheNodeType: cache.t2.medium
+      CacheNodeType: ${env:CACHE_INSTANCE_CLASS}
       NumCacheNodes: 1
       # In transit encryption is not currently supported with the REDIS engine.
       # TransitEncryptionEnabled: true

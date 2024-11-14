@@ -1,11 +1,12 @@
 service: earthdata-search
+frameworkVersion: '3'
 
 provider:
   name: aws
   runtime: nodejs18.x
   versionFunctions: false
   stage: ${opt:stage, 'dev'}
-  region: us-east-1
+  region: ${opt:region}
   endpointType: PRIVATE
   memorySize: 128
   environment:
@@ -58,8 +59,8 @@ provider:
     securityGroupIds:
       - Fn::ImportValue: ${self:provider.stage}-LambdaSecurityGroup
     subnetIds:
-      - ${env:SUBNET_ID_A, 'subnetIdA'}
-      - ${env:SUBNET_ID_B, 'subnetIdB'}
+      - ${env:SUBNET_ID_A}
+      - ${env:SUBNET_ID_B}
 
   iam:
     role:
@@ -68,6 +69,7 @@ provider:
   # Prevent Serverless from attempting to modify the deployment bucket policy as NGAP does not allow it
   deploymentBucket:
     skipPolicySetup: true
+    name: ${env:SERVERLESS_BUCKET}
 
   # Deprecation warning: Starting with next major version, API Gateway naming will be changed from "{stage}-{service}" to "{service}-{stage}".
   # Set "provider.apiGateway.shouldStartNameWithService" to "true" to adapt to the new behavior now.
@@ -76,6 +78,20 @@ provider:
   apiGateway:
     shouldStartNameWithService: true
     binaryMediaTypes: 'image/png'
+    resourcePolicy:
+      - Effect: Allow
+        Principal: '*'
+        Action: execute-api:Invoke
+        Resource:
+          - execute-api:/*
+      - Effect: Deny
+        Principal: '*'
+        Action: execute-api:Invoke
+        Resource:
+          - execute-api:/*
+        Condition:
+          StringNotEquals:
+            aws:SourceVpc: ${env:VPC_ID}
 
 plugins:
   - serverless-esbuild
@@ -117,6 +133,15 @@ custom:
   infrastructureStackName: earthdata-search-infrastructure-${self:provider.stage}
 
   serverlessIfElse:
+    - If: '"${self:custom.variables.boundaryPolicy}" == ""'
+      Exclude:
+        - resources.ServerlessAppRole.PermissionsBoundary
+        - resources.IamRoleCustomResourcesLambdaExecution.PermissionsBoundary
+
+    - If: '"${self:custom.variables.logDestinationArn}" == ""'
+      Set:
+        custom.logSubscription.enabled: false
+
     # When invoking an offline lambda with `npm run invoke-local` this condition will disable serverless components that need to import or reference cloudformation values
     - If: '"${self:provider.stage}" == "invokeLocal"'
       Exclude:
@@ -146,6 +171,8 @@ custom:
     obfuscationSpinShapefiles: ${env:OBFUSCATION_SPIN_SHAPEFILES, ''}
     orderDelaySeconds: ${env:ORDER_DELAY_SECONDS, '1'}
     useCache: ${env:USE_CACHE, 'false'}
+    boundaryPolicy: ${env:BOUNDARY_POLICY, ''}
+    logDestinationArn: ${env:LOG_DESTINATION_ARN, ''}
 
     cloudfrontToCloudwatchBucketPrefixApi:
       Fn::Join:
@@ -213,6 +240,7 @@ custom:
   splitStacks:
     perFunction: true
 
+  # https://www.serverless.com/plugins/serverless-plugin-log-subscription
   logSubscription:
     enabled: true
-    destinationArn: ${env:LOG_DESTINATION_ARN, ''}
+    destinationArn: ${self:custom.variables.logDestinationArn}
