@@ -139,7 +139,7 @@ custom:
 
     - If: '"${self:custom.variables.boundaryPolicy}" == ""'
       Exclude:
-        - resources.IamRoleCustomResourcesLambdaExecution.Properties.PermissionsBoundary
+        - resources.Resources.IamRoleCustomResourcesLambdaExecution.Properties.PermissionsBoundary
 
     - If: '"${self:custom.variables.logDestinationArn}" == ""'
       Set:
