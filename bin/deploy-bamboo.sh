@@ -52,29 +52,6 @@ cat <<EOF > secret.config.json
 }
 EOF
 
-# Set up Docker image
-#####################
-
-cat <<EOF > .dockerignore
-node_modules
-.DS_Store
-.git
-.github
-.serverless
-.webpack
-coverage
-dist
-node_modules
-tmp
-EOF
-
-cat <<EOF > Dockerfile
-FROM node:18.19-bullseye
-COPY . /build
-WORKDIR /build
-RUN npm ci --omit=dev && npm run build
-EOF
-
 dockerTag=edsc-$bamboo_STAGE_NAME
 docker build -t $dockerTag .
 
@@ -99,6 +76,7 @@ dockerRun() {
         -e "SUBNET_ID_B=$bamboo_SUBNET_ID_B" \
         -e "USE_CACHE=$bamboo_USE_CACHE" \
         -e "VPC_ID=$bamboo_VPC_ID" \
+        -e "BOUNDARY_POLICY=NGAPShRoleBoundary" \
         $dockerTag "$@"
 }
 
