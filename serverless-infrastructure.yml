@@ -39,4 +39,4 @@ custom:
 
     - If: '"${self:custom.variables.boundaryPolicy}" == ""'
       Exclude:
-        - resources.ServerlessAppRole.PermissionsBoundary
+        - resources.ServerlessAppRole.Properties.PermissionsBoundary
