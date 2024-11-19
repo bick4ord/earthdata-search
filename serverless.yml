@@ -7,7 +7,7 @@ provider:
   versionFunctions: false
   stage: ${opt:stage, 'dev'}
   region: ${opt:region}
-  endpointType: PRIVATE
+  endpointType: REGIONAL
   memorySize: 128
   environment:
     NODE_ENV: ${env:NODE_ENV, 'development'}
@@ -84,14 +84,6 @@ provider:
         Action: execute-api:Invoke
         Resource:
           - execute-api:/*
-      - Effect: Deny
-        Principal: '*'
-        Action: execute-api:Invoke
-        Resource:
-          - execute-api:/*
-        Condition:
-          StringNotEquals:
-            aws:SourceVpc: ${env:VPC_ID}
 
 plugins:
   - serverless-esbuild

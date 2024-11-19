@@ -179,6 +179,128 @@ Resources:
       PolicyName: ${self:provider.stage}-S3CloudfrontLogToCloudwatchPolicy
       Roles:
         - Ref: IamRoleCustomResourcesLambdaExecution
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      Description: API Gateway for Earth Data Search ${self:provider.stage}
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: dev
+      # StageDescription:
+
+  ApiGatewayRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: ${self:provider.stage}-EarthDataSearchApiGatewayRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${env:CLOUDFRONT_BUCKET_NAME, ''}/*"
+
+  ApiGatewayMethodForS3Index:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      HttpMethod: GET
+      MethodResponses:
+        - StatusCode: 200
+          # ResponseModels: {"text/html": "Empty"}
+          ResponseParameters:
+            method.response.header.Content-Type: true
+            method.response.header.Timestamp: true
+      ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt ApiGatewayRole.Arn
+        IntegrationHttpMethod: GET
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:s3:path/${env:CLOUDFRONT_BUCKET_NAME, ''}/index.html"
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters: {"method.response.header.Content-Type": "integration.response.header.Content-Type", "method.response.header.Timestamp": "integration.response.header.Date"}
+
+  AssetsResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      RestApiId: !Ref ApiGatewayRestApi
+      PathPart: 'assets'
+
+  ProxyResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !Ref AssetsResource
+      RestApiId: !Ref ApiGatewayRestApi
+      PathPart: '{proxy+}'
+
+  ApiGatewayMethodForS3Assets:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref ProxyResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        CacheKeyParameters:
+          - 'method.request.path.proxy'
+        RequestParameters:
+          integration.request.path.proxy: 'method.request.path.proxy'
+        Type: AWS
+        Credentials: !GetAtt ApiGatewayRole.Arn
+        IntegrationHttpMethod: GET
+        Uri: !Sub "arn:${AWS::Partition}:apigateway:${AWS::Region}:s3:path/${env:CLOUDFRONT_BUCKET_NAME, ''}/assets/{proxy}"
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters: {"method.response.header.Content-Type": "integration.response.header.Content-Type", "method.response.header.Timestamp": "integration.response.header.Date"}
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels: {"text/javascript": "Empty", "text/html": "Empty", "image/png": "Empty", "text/css": "Empty"}
+          ResponseParameters:
+            method.response.header.Content-Type: true
+            method.response.header.Timestamp: true
+
+  CloudFrontDistro:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultCacheBehavior:
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: dev
+          ViewerProtocolPolicy: redirect-to-https
+        Origins:
+          - Id: dev
+            DomainName: !Sub
+              - ${api}.execute-api.${AWS::Region}.amazonaws.com
+              - api: !Ref ApiGatewayRestApi
+            OriginPath: /dev
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+
+
+
 Outputs:
   UpdateOrderStatusWorkflow:
     Description: ARN of the order status step function workflow

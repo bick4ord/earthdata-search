@@ -89,7 +89,7 @@ After an `npm install` or `npm ci` command creates the `node_modules` directory,
 
     ./node_modules/.bin/serverless
 
-It is not recommended to install serverless at the global level, since the version downloaded may not be compatible with the versions that was tested against the latest release.  Using the binary from `node_modules` ensures that the version is compatible with what is tracked in `package-log.json` delivered in this repository.
+It is not recommended to install serverless at the global level, since the version downloaded may not be compatible with the version that was tested against the latest release.  Using the binary from `node_modules` ensures that the version is compatible with what is tracked in `package-log.json` delivered in this repository.
 
 To run serverless commands for deployments, there is a dedicated deployment section below.
 
@@ -201,9 +201,10 @@ test coverage will be updated in the coverage directory to see breakdown use
 
 ### Deployment
 First, build the docker container that will host the deployment bundle:
+
     docker build --platform linux/amd64 -t earthdata-search:deploy .
 
-Do not publish this docker image since it may contain files with secrets.
+Do not publish this docker image since it may contain files with secrets.  The cpu architecture is forced to amd64 since the `npm install` currently fails on apple silicon (arm cpus).
 
 When the time comes to deploy the application, first ensure that you have the required ENV vars set:
 
