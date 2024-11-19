@@ -180,14 +180,6 @@ Resources:
       Roles:
         - Ref: IamRoleCustomResourcesLambdaExecution
 
-  ApiGatewayDeployment:
-    Type: AWS::ApiGateway::Deployment
-    Properties:
-      Description: API Gateway for Earth Data Search ${self:provider.stage}
-      RestApiId: !Ref ApiGatewayRestApi
-      StageName: dev
-      # StageDescription:
-
   ApiGatewayRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -277,6 +269,17 @@ Resources:
           ResponseParameters:
             method.response.header.Content-Type: true
             method.response.header.Timestamp: true
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+     - ApiGatewayMethodForS3Index
+     - ApiGatewayMethodForS3Assets
+    Properties:
+      Description: API Gateway for Earth Data Search ${self:provider.stage}
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: dev
+      # StageDescription:
 
   CloudFrontDistro:
     Type: AWS::CloudFront::Distribution
