@@ -166,29 +166,30 @@ Resources:
   RedisParameterGroup:
     Type: AWS::ElastiCache::ParameterGroup
     Properties:
-      CacheParameterGroupFamily: redis7
-      Description: 'Redis ElasticCache Parameter Group'
+      CacheParameterGroupFamily: valkey8
+      Description: 'Valkey ElasticCache Parameter Group'
       Properties:
         maxmemory-policy: allkeys-lru
 
-  RedisElasticCacheCluster:
-    DependsOn: RedisSecurityGroup
-    Type: AWS::ElastiCache::CacheCluster
+  RedisElasticCacheReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
     Properties:
-      Engine: redis
-      EngineVersion: '7.0'
+      ReplicationGroupDescription: ${self:provider.stage} earth data search browse-scaler
+      Engine: valkey
+      EngineVersion: '8.0'
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
       Port: 1521
-      ClusterName: browse-scaler-${self:provider.stage}
       CacheNodeType: ${env:CACHE_INSTANCE_CLASS}
-      NumCacheNodes: 1
-      # In transit encryption is not currently supported with the REDIS engine.
-      # TransitEncryptionEnabled: true
       CacheParameterGroupName:
         Ref: RedisParameterGroup
-      VpcSecurityGroupIds:
-      - "Fn::GetAtt": RedisSecurityGroup.GroupId
+      SecurityGroupIds:
+        - "Fn::GetAtt": RedisSecurityGroup.GroupId
       CacheSubnetGroupName:
         Ref: RedisCacheSubnetGroup
+      MultiAZEnabled: false
+      NumNodeGroups: 1
+      AutomaticFailoverEnabled: false
 
 # Output the following resources so that other stacks can access the values
 Outputs:
@@ -232,15 +233,15 @@ Outputs:
   ElastiCacheEndpoint:
     Value:
       Fn::GetAtt:
-        - RedisElasticCacheCluster
-        - RedisEndpoint.Address
+        - RedisElasticCacheReplicationGroup
+        - PrimaryEndPoint.Address
     Export:
       Name: ${self:provider.stage}-ElastiCacheEndpoint
 
   ElastiCachePort:
     Value:
       Fn::GetAtt:
-        - RedisElasticCacheCluster
-        - RedisEndpoint.Port
+        - RedisElasticCacheReplicationGroup
+        - PrimaryEndPoint.Port
     Export:
       Name: ${self:provider.stage}-ElastiCachePort
