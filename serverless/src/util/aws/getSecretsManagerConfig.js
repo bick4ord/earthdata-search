@@ -4,8 +4,7 @@
  */
 export const getSecretsManagerConfig = () => {
   const productionConfig = {
-    apiVersion: '2017-10-17',
-    region: 'us-east-1'
+    apiVersion: '2017-10-17'
   }
 
   return productionConfig

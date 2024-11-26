@@ -11,7 +11,6 @@ export const getLambdaConfig = () => {
     // The endpoint should point to the serverless offline host:port
     return {
       ...productionConfig,
-      region: 'us-east-1',
       endpoint: 'http://localhost:3001'
     }
   }
