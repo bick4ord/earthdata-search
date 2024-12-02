@@ -1,0 +1,88 @@
+Resources:
+  # Lambda edge functions need to be in us-east-1
+
+  OriginAccess:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        # Description:
+        Name: ${self:provider.stage}-earthsearch-origin-access
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudfrontLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: ${self:provider.stage}-earthsearch-cloudfront
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+
+  CloudfrontLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      # FunctionName: ${self:provider.stage}-earthsearch-cloudfront
+      Description: Rewrite requests to return index.html
+      Architectures:
+        # edge lambdas don't support arm64
+        - x86_64
+      Code:
+        ZipFile: |
+          'use strict';
+          var regex = new RegExp('^/assets/');
+          exports.handler = (event, context, callback) => {
+              var request = event.Records[0].cf.request;
+              var olduri = request.uri;
+              if (!regex.test(olduri)) {
+                  // Replace the received URI with the index page
+                  request.uri = '/index.html';
+              }
+              // Log the URI as received by CloudFront and the new URI to be used to fetch from origin
+              console.log("Old: [" + olduri + "] New: [" + request.uri + "]");
+              callback(null, request);
+          }
+
+      Handler: index.handler
+      PackageType: Zip
+      Role: !GetAtt CloudfrontLambdaRole.Arn
+      Runtime: nodejs22.x
+
+  CloudfrontLambdaVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !Ref CloudfrontLambda
+
+  CloudFrontDistro:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        DefaultCacheBehavior:
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: dev
+          ViewerProtocolPolicy: redirect-to-https
+          LambdaFunctionAssociations:
+            - EventType: origin-request
+              LambdaFunctionARN: !Ref CloudfrontLambdaVersion
+              IncludeBody: false
+
+        Origins:
+          - Id: dev
+            OriginAccessControlId: !GetAtt OriginAccess.Id
+            DomainName: !Sub ${env:CLOUDFRONT_BUCKET_NAME, ''}.s3.${AWS::Region}.amazonaws.com
+            S3OriginConfig:
+              OriginAccessIdentity: ""

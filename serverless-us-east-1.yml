@@ -1,0 +1,30 @@
+service: earthdata-search-us-east-1
+frameworkVersion: '3'
+configValidationMode: error
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region}
+  # stackName: earthdata-search-us-east-1-${self:provider.stage}
+
+  vpc:
+    securityGroupIds:
+      - Fn::ImportValue: ${self:provider.stage}-LambdaSecurityGroup
+    subnetIds:
+      - ${env:SUBNET_ID_A}
+      - ${env:SUBNET_ID_B}
+
+  iam:
+    role:
+      Fn::ImportValue: ${self:provider.stage}-EDSCServerlessAppRole
+
+  deploymentBucket:
+    skipPolicySetup: true
+    name: ${self:custom.variables.serverlessBucket}
+
+resources: ${file(./serverless-configs/${self:provider.name}-us-east-1-resources.yml)}
+
+custom:
+  variables:
+    serverlessBucket: ${env:SERVERLESS_BUCKET, ''}

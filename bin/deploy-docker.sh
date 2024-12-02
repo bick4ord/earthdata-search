@@ -21,6 +21,7 @@ if [[ -z "${1}" ]]; then
     echo "Configs:"
     echo "    serverless-infrastructure"
     echo "    serverless"
+    echo "    serverless-us-east-1"
     echo
     echo "Examples:"
     echo "    ${0} dev deploy serverless-infrastructure"
@@ -86,6 +87,8 @@ elif [[ ${config} == "serverless" ]]; then
         fail "CLOUDFRONT_BUCKET_NAME not found, see README for instructions"
     fi
 
+elif [[ ${config} == "serverless-us-east-1" ]]; then
+    echo
 else
     fail "unrecognized CONFIG [${config}]"
 fi
